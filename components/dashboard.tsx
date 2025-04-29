@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
 import StockTable from "./stock-table"
@@ -12,8 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import LoadingSpinner from "./loading-spinner"
-
-
 
 // Default stocks to display
 const DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
@@ -34,7 +31,6 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchInput, setSearchInput] = useState("")
   const [failedSymbols, setFailedSymbols] = useState<string[]>([])
-  
 
   useEffect(() => {
     fetchStockData(DEFAULT_STOCKS)
@@ -44,30 +40,37 @@ export default function Dashboard() {
     setLoading(true)
     setError(null)
     setFailedSymbols([])
-
+  
     try {
       const successfulStocks: StockData[] = []
       const failed: string[] = []
-
-      // Process each symbol
+  
+      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY;
+      console.log("🚀 Using API Key:", apiKey);
+  
+      if (!apiKey) {
+        throw new Error("Missing VITE_ALPHA_VANTAGE_API_KEY in environment variables")
+      }
+  
       for (const symbol of symbols) {
         try {
-          // In a real app, you would use your actual API key
-          const apiKey = import.meta.env.VITE_ALPHA_VANTAGE_API_KEY;
-
+          console.log(`🔎 Fetching stock data for: ${symbol}`);
+  
           const response = await fetch(
-                 `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`,);
-
-
+            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
+          )
+  
+          console.log(`📦 Raw Fetch Response for ${symbol}:`, response);
+  
           const data = await response.json()
-
-          // Check if we got valid data
+          console.log(`📈 API Data Received for ${symbol}:`, data);
+  
           if (data["Error Message"] || !data["Global Quote"] || Object.keys(data["Global Quote"]).length === 0) {
-            console.warn(`Failed to fetch data for ${symbol}`)
+            console.warn(`⚠️ Failed to fetch data for ${symbol}`)
             failed.push(symbol)
             continue
           }
-
+  
           const quote = data["Global Quote"]
           successfulStocks.push({
             symbol,
@@ -78,26 +81,27 @@ export default function Dashboard() {
             lastUpdated: new Date().toLocaleString(),
           })
         } catch (err) {
-          console.warn(`Error fetching ${symbol}`, err)
+          console.warn(`❌ Error fetching ${symbol}`, err)
           failed.push(symbol)
         }
       }
-
+  
       setStocks(successfulStocks)
       setFailedSymbols(failed)
-
+  
       if (successfulStocks.length === 0) {
         setError("Unable to fetch any stock data. Please try again later.")
       } else if (failed.length > 0) {
         setError(`Unable to fetch data for some stocks: ${failed.join(", ")}. This may be due to API rate limits.`)
       }
     } catch (err) {
-      console.error("Error fetching stock data:", err)
+      console.error("💥 Error fetching stock data:", err)
       setError("Failed to fetch stock data. Please try again later.")
     } finally {
       setLoading(false)
     }
   }
+  
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,7 +141,7 @@ export default function Dashboard() {
           </form>
 
           <p className="text-sm text-muted-foreground mb-6">
-            Note: Using Alpha Vantage demo API which has rate limitations.
+            Note: Using Alpha Vantage API which has rate limitations.
           </p>
 
           {error && (
