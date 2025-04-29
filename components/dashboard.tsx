@@ -140,10 +140,6 @@ export default function Dashboard() {
             </Button>
           </form>
 
-          <p className="text-sm text-muted-foreground mb-6">
-            Note: Using Alpha Vantage API which has rate limitations.
-          </p>
-
           {error && (
             <Alert variant="destructive" className="mb-6">
               <AlertTitle>Error</AlertTitle>
