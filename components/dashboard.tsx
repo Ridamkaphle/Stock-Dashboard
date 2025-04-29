@@ -7,12 +7,11 @@ import StockTable from "./stock-table"
 import StockChart from "./stock-chart"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import LoadingSpinner from "./loading-spinner"
 
-// Default stocks to display
 const DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
 
 export interface StockData {
@@ -36,72 +35,69 @@ export default function Dashboard() {
     fetchStockData(DEFAULT_STOCKS)
   }, [])
 
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
   const fetchStockData = async (symbols: string[]) => {
     setLoading(true)
     setError(null)
     setFailedSymbols([])
-  
+
     try {
       const successfulStocks: StockData[] = []
       const failed: string[] = []
-  
-      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY;
-      console.log("🚀 Using API Key:", apiKey);
-  
-      if (!apiKey) {
-        throw new Error("Missing VITE_ALPHA_VANTAGE_API_KEY in environment variables")
-      }
-  
-      for (const symbol of symbols) {
-        try {
-          console.log(`🔎 Fetching stock data for: ${symbol}`);
-  
-          const response = await fetch(
-            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
-          )
-  
-          console.log(`📦 Raw Fetch Response for ${symbol}:`, response);
-  
-          const data = await response.json()
-          console.log(`📈 API Data Received for ${symbol}:`, data);
-  
-          if (data["Error Message"] || !data["Global Quote"] || Object.keys(data["Global Quote"]).length === 0) {
-            console.warn(`⚠️ Failed to fetch data for ${symbol}`)
-            failed.push(symbol)
-            continue
-          }
-  
-          const quote = data["Global Quote"]
-          successfulStocks.push({
-            symbol,
-            price: Number.parseFloat(quote["05. price"]),
-            change: Number.parseFloat(quote["09. change"]),
-            changePercent: Number.parseFloat(quote["10. change percent"].replace("%", "")),
-            previousClose: Number.parseFloat(quote["08. previous close"]),
-            lastUpdated: new Date().toLocaleString(),
-          })
-        } catch (err) {
-          console.warn(`❌ Error fetching ${symbol}`, err)
-          failed.push(symbol)
-        }
-      }
-  
+
+      const apiKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
+console.log("🔑 Using Finnhub API Key:", apiKey);
+
+if (!apiKey) {
+  throw new Error("Missing NEXT_PUBLIC_FINNHUB_API_KEY in environment variables");
+}
+
+for (const symbol of symbols) {
+  await sleep(1000); // Finnhub allows 60 calls/minute on free tier
+
+  try {
+    console.log(`📡 Fetching Finnhub data for: ${symbol}`);
+    const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
+    const data = await response.json();
+    console.log(`✅ Response for ${symbol}:`, data);
+
+    if (!data.c || data.c === 0) {
+      console.warn(`❌ No valid data for ${symbol}`);
+      failed.push(symbol);
+      continue;
+    }
+
+    successfulStocks.push({
+      symbol,
+      price: data.c,
+      change: data.d,
+      changePercent: data.dp,
+      previousClose: data.pc,
+      lastUpdated: new Date().toLocaleString(),
+    });
+  } catch (err) {
+    console.error(`Error fetching data for ${symbol}:`, err);
+    failed.push(symbol);
+  }
+}
+
+
       setStocks(successfulStocks)
       setFailedSymbols(failed)
-  
+
       if (successfulStocks.length === 0) {
         setError("Unable to fetch any stock data. Please try again later.")
       } else if (failed.length > 0) {
         setError(`Unable to fetch data for some stocks: ${failed.join(", ")}. This may be due to API rate limits.`)
       }
     } catch (err) {
-      console.error("💥 Error fetching stock data:", err)
+      console.error("\u{1F4A5} Error fetching stock data:", err)
       setError("Failed to fetch stock data. Please try again later.")
     } finally {
       setLoading(false)
     }
   }
-  
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
