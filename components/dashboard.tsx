@@ -123,7 +123,6 @@ export default function Dashboard() {
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="text-2xl md:text-3xl">Stock Price Dashboard</CardTitle>
-          <CardDescription>Real-time stock prices and performance metrics</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearch} className="flex gap-2 mb-2">
